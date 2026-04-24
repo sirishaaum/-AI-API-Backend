@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: ai-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+      - DAILY_TOKEN_QUOTA=${DAILY_TOKEN_QUOTA:-50000}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - api-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-api-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - api-net
+
+volumes:
+  redis_data:
+
+networks:
+  api-net:
+    driver: bridge
